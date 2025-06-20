@@ -13,19 +13,13 @@ def getHardwareSpecs(p):
 
 def makeFormat():
     return {
-        'rate': 48000,
+        'rate': 48000, # based on input channel
         'format': pyaudio.paInt16,
         'channels': 1,  # mono
-        'frames_per_buffer': 2048  # increased buffer size for safety
+        'frames_per_buffer': 2048
     }
 
-if __name__ == "__main__":
-    p = pyaudio.PyAudio()
-    getHardwareSpecs(p)
-
-    audio_format = makeFormat()
-    DEVICE_INDEX = 3  # 🔁 Make sure this matches your working mic!
-
+def recordClip(p, audio_format, DEVICE_INDEX, seconds):
     try:
         stream = p.open(
             format=audio_format['format'],
@@ -40,11 +34,11 @@ if __name__ == "__main__":
         p.terminate()
         sys.exit(1)
 
-    print("Recording for 3 seconds...")
+    print(f"Recording Started - {seconds} Seconds")
     frames = []
 
     try:
-        for _ in range(0, int(audio_format['rate'] / audio_format['frames_per_buffer'] * 3)):
+        for _ in range(0, int(audio_format['rate'] / audio_format['frames_per_buffer'] * seconds)):
             data = stream.read(audio_format['frames_per_buffer'], exception_on_overflow=False)
             frames.append(data)
     except Exception as e:
@@ -54,11 +48,32 @@ if __name__ == "__main__":
     stream.close()
     p.terminate()
 
-    output_filename = "output.wav"
+    return frames
+
+def saveClip(p, audio_format, frames):
+    output_filename = "recording.wav"
     with wave.open(output_filename, 'wb') as wf:
         wf.setnchannels(audio_format['channels'])
         wf.setsampwidth(p.get_sample_size(audio_format['format']))
         wf.setframerate(audio_format['rate'])
         wf.writeframes(b''.join(frames))
 
-    print(f"✅ Saved 3-second recording to '{output_filename}'")
+    print(f"Saved recording to '{output_filename}'")
+
+
+def main():
+    p = pyaudio.PyAudio()
+    #getHardwareSpecs(p)
+
+    DEVICE_INDEX = 9  # Uncomment getHardwareSpecs to see available input devices
+                    # Update DEVICE_INDEX & makeFormat parameters accordingly.
+
+    audio_format = makeFormat()
+    frames = recordClip(p, audio_format, DEVICE_INDEX, 3)
+    saveClip(p, audio_format, frames)
+
+
+if __name__ == "__main__":
+    main()
+
+
